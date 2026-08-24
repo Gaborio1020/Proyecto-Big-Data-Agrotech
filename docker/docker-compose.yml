@@ -1,0 +1,106 @@
+services:
+
+  workspace:
+    build: .
+    container_name: bigdata_workspace
+    platform: linux/amd64
+
+    ports:
+      - "8888:8888"
+      - "4040:4040"
+      - "5900:5900"
+      - "6080:6080"
+
+    volumes:
+      - ..:/home/jovyan/work
+
+    environment:
+      - JUPYTER_TOKEN=
+      - JUPYTER_PASSWORD=
+      - JUPYTER_ALLOW_INSECURE_WRITES=true
+      - DISPLAY=:99
+      - JUPYTER_ENABLE_LAB=yes
+
+      # 🔥 FIX CRÍTICO SPARK + MONGO
+      - PYSPARK_SUBMIT_ARGS=--packages org.mongodb.spark:mongo-spark-connector_2.12:10.4.0,org.mongodb:mongodb-driver-sync:4.11.1 pyspark-shell
+
+    shm_size: "2gb"
+
+    depends_on:
+      - database
+      - admin-db
+      - admin-db-atlas
+
+    dns:
+      - 8.8.8.8
+
+    restart: always
+
+    networks:
+      - bigdata_net
+
+
+  database:
+    image: mongo:6.0
+    container_name: bigdata_mongodb
+    platform: linux/amd64
+
+    ports:
+      - "27017:27017"
+
+    volumes:
+      - mongo_data:/data/db
+
+    restart: always
+
+    networks:
+      - bigdata_net
+
+
+  admin-db:
+    image: mongo-express:latest
+    container_name: bigdata_ui_local
+    restart: always
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      - ME_CONFIG_MONGODB_URL=${MONGO_URI_LOCAL}
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+
+    depends_on:
+      - database
+
+    networks:
+      - bigdata_net
+
+
+  admin-db-atlas:
+    image: mongo-express:latest
+    container_name: bigdata_ui_atlas
+    restart: always
+
+    ports:
+      - "8082:8081"
+
+    environment:
+      - ME_CONFIG_MONGODB_URL=${MONGO_URI}
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+
+    dns:
+      - 8.8.8.8
+
+    networks:
+      - bigdata_net
+
+volumes:
+  mongo_data:
+
+
+networks:
+  bigdata_net:
+    driver: bridge
+    name: BigData_Network_UCN
+
+

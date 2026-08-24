@@ -1,0 +1,30 @@
+# Usamos una imagen base ligera de Python
+FROM python:3.9-slim
+
+# Evita que Python genere archivos .pyc y permite ver logs en tiempo real
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Instalacion de dependencias del sistema necesarias para Spark (Java)
+# En Mac es vital tener el JRE instalado dentro del contenedor
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jre-headless \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Definir variables de entorno para Java (Requerido por PySpark)
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiamos e instalamos dependencias de Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiamos el resto del codigo
+COPY . .
+
+# Comando por defecto
+CMD ["python", "main.py"]
